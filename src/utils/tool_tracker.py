@@ -136,39 +136,24 @@ class ToolTrace:
         
         # 处理已完成状态的输出
         if self.status == "completed" and self.outputs:
-            # 格式化输出，根据输出类型选择合适的显示方式
-            if isinstance(self.outputs, str) and len(self.outputs) > 500:
-                # 长文本输出，添加可折叠区域
-                outputs_preview = self.outputs[:500] + "..."
-                outputs_full = self.outputs.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"').replace("\n", "\\n")
-                html += f"""
-        <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; color: #616161; font-size: 0.85em; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center;">
-                <span>输出结果</span>
-                <button onclick="window.toggleToolOutput('{tool_id}')" style="background: none; border: none; color: #1E88E5; cursor: pointer; font-size: 0.85em; padding: 2px 6px;">展开完整内容</button>
-            </div>
-            <div id="{tool_id}_preview" style="display: block; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; white-space: pre-wrap; font-size: 0.9em; line-height: 1.5; color: #424242; background-color: rgba(46,125,50,0.05); padding: 12px; border-radius: 6px; overflow-x: auto; max-height: 200px; overflow-y: auto;">{outputs_preview}</div>
-            <div id="{tool_id}_full" style="display: none; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; white-space: pre-wrap; font-size: 0.9em; line-height: 1.5; color: #424242; background-color: rgba(46,125,50,0.05); padding: 12px; border-radius: 6px; overflow-x: auto; max-height: 800px; overflow-y: auto;"></div>
-            <script>
-                document.getElementById('{tool_id}_full').textContent = "{outputs_full}";
-            </script>
-        </div>"""
-            else:
-                # 常规输出
-                try:
-                    # 尝试将JSON字符串转换为格式化显示
-                    if isinstance(self.outputs, str) and (self.outputs.startswith('{') or self.outputs.startswith('[')):
-                        json_obj = json.loads(self.outputs)
-                        outputs_str = json.dumps(json_obj, ensure_ascii=False, indent=2)
-                    else:
-                        outputs_str = str(self.outputs)
-                except:
-                    outputs_str = str(self.outputs)
-                
-                html += f"""
+            outputs_display_str = ""
+            try:
+                # 尝试将JSON字符串转换为格式化显示
+                if isinstance(self.outputs, str) and (self.outputs.startswith('{') or self.outputs.startswith('[')):
+                    json_obj = json.loads(self.outputs)
+                    outputs_display_str = json.dumps(json_obj, ensure_ascii=False, indent=2)
+                else:
+                    outputs_display_str = str(self.outputs)
+                print(outputs_display_str)
+            except json.JSONDecodeError: # More specific error handling
+                outputs_display_str = str(self.outputs) # Fallback for invalid JSON
+            except Exception:  # Fallback for other potential errors during string conversion
+                outputs_display_str = str(self.outputs)
+            
+            html += f"""
         <div style="margin-bottom: 12px;">
             <div style="font-weight: 500; color: #616161; font-size: 0.85em; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">输出结果</div>
-            <div style="font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; white-space: pre-wrap; font-size: 0.9em; line-height: 1.5; color: #424242; background-color: rgba(46,125,50,0.05); padding: 12px; border-radius: 6px; overflow-x: auto; max-height: 800px; overflow-y: auto;">{outputs_str}</div>
+            <div style="font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; white-space: pre-wrap; font-size: 0.9em; line-height: 1.5; color: #424242; background-color: rgba(46,125,50,0.05); padding: 12px; border-radius: 6px; overflow-x: auto; max-height: 800px; overflow-y: auto;">{outputs_display_str}</div>
         </div>"""
         
         # 处理错误状态
@@ -290,29 +275,7 @@ class ToolTracker:
         if not self.traces:
             return "<div>没有工具调用记录</div>"
         
-        # 添加全局JavaScript函数，用于切换输出显示
-        js_script = """
-<script>
-// 全局工具输出切换函数
-window.toggleToolOutput = function(toolId) {
-    const preview = document.getElementById(toolId + '_preview');
-    const full = document.getElementById(toolId + '_full');
-    const button = document.querySelector(`#${toolId}_card button`);
-    
-    if (preview.style.display === 'none') {
-        preview.style.display = 'block';
-        full.style.display = 'none';
-        button.textContent = '展开完整内容';
-    } else {
-        preview.style.display = 'none';
-        full.style.display = 'block';
-        button.textContent = '收起';
-    }
-}
-</script>
-        """
-        
-        html = f"<div class='tool-tracker'>{js_script}"
+        html = "<div class='tool-tracker'>"
         for trace in self.traces:
             html += trace.to_html()
         html += "</div>"

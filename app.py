@@ -204,31 +204,6 @@ PersonaForge 允许用户为大语言模型设定特定的角色、风格和行�
 3. 开始与PersonaForge对话
 """)
 
-
-def extract_script_plan_params(user_input):
-    import re
-    characters = [m for m in re.findall(r'[（(]([^）)]+)[）)]', user_input) if len(m) < 10]
-    return {
-        "genre": "剧情片",
-        "theme": "个人成长",
-        "characters": characters,
-        "setting": "现代都市",
-        "duration": "90分钟"
-    }
-def extract_character_profile_params(user_input):
-    import re
-    char_matches = re.findall(r'[（(]([^）)]+)[）)]', user_input)
-    return {"name": char_matches[0] if char_matches else "", "age": "", "background": "", "personality": "", "goals": ""}
-def extract_dialogue_params(user_input):
-    import re
-    return {
-        "characters": [m for m in re.findall(r'[（(]([^）)]+)[）)]', user_input) if len(m) < 10],
-        "scene": "未指定场景",
-        "situation": "日常对话",
-        "tone": "自然",
-        "length": "中等"
-    }
-
 # 初始化LLM和参数提取器
 if "param_extractor" not in st.session_state:
     param_llm = LLMManager(api_key=os.getenv("DASHSCOPE_API_KEY"), api_base=os.getenv("DASHSCOPE_API_BASE")).create_llm({"temperature": 0.1})
@@ -378,7 +353,7 @@ def handle_message(
                     <span style='margin-right: 8px; font-size: 18px;'>🔧</span>
                     <h4 style='margin: 0; color: #424242; font-size: 1em; font-weight: 600;'>工具调用过程</h4>
                 </div>
-                <div style='padding: 16px;'>
+                <div style='padding: 8px;'>
                     <div id='tool-calls' style='overflow-y: auto;'>{html_report}</div>
                 </div>
             </div>
@@ -407,7 +382,7 @@ def handle_message(
                 <span style='margin-right: 8px; font-size: 18px;'>🔧</span>
                 <h4 style='margin: 0; color: #424242; font-size: 1em; font-weight: 600;'>工具调用过程</h4>
             </div>
-            <div style='padding: 16px;'>
+            <div style='padding: 8px;'>
         """
         
         for trace in tool_traces:

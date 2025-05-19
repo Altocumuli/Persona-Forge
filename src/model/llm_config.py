@@ -49,7 +49,7 @@ class LLMManager:
             streaming=config.get("streaming", True),  # 默认启用流式输出
             model_kwargs={
                 "temperature": config.get("temperature", 0.7),
-                "max_tokens": config.get("max_tokens", 1200),
+                "max_tokens": config.get("max_tokens", 2000),
                 "top_p": config.get("top_p", 0.95),
                 "frequency_penalty": config.get("frequency_penalty", 0.0),
                 "presence_penalty": config.get("presence_penalty", 0.0),

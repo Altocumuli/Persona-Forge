@@ -359,6 +359,10 @@ def handle_message(
         st.markdown("*正在处理...*")
         tools_placeholder = st.empty()
         message_placeholder = st.empty()
+        
+        # 清除之前可能显示的工具调用内容
+        if st.session_state.show_tools:
+            tools_placeholder.empty()
 
     # 工具调用追踪
     final_tool_html = ""
@@ -369,9 +373,14 @@ def handle_message(
         st.session_state.last_tool_html = html_report
         if st.session_state.show_tools:
             html_content = f"""
-            <div style='margin-bottom: 20px; padding: 10px; background-color: #FFFFFF; border: 1px solid #DDDDDD; border-radius: 5px;'>
-                <h4 style='color: #212121; margin-bottom: 10px;'>🔧 工具调用过程</h4>
-                <div id='tool-calls' style='max-height: 400px; overflow-y: auto;'>{html_report}</div>
+            <div style='margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08); background-color: #FFFFFF; border: 1px solid rgba(0,0,0,0.05);'>
+                <div style='padding: 12px 16px; background-color: #F5F9FF; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center;'>
+                    <span style='margin-right: 8px; font-size: 18px;'>🔧</span>
+                    <h4 style='margin: 0; color: #424242; font-size: 1em; font-weight: 600;'>工具调用过程</h4>
+                </div>
+                <div style='padding: 16px;'>
+                    <div id='tool-calls' style='overflow-y: auto;'>{html_report}</div>
+                </div>
             </div>
             """
             render_html(tools_placeholder, html_content)
@@ -392,17 +401,103 @@ def handle_message(
             break
     # 工具trace结构化展示
     if st.session_state.show_tools and tool_traces:
-        html = "<div style='margin-bottom: 20px; padding: 10px; background-color: #FFFFFF; border: 1px solid #DDDDDD; border-radius: 5px;'>"
-        html += "<h4 style='color: #212121; margin-bottom: 10px;'>🔧 工具调用过程</h4>"
+        html = f"""
+        <div style='margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08); background-color: #FFFFFF; border: 1px solid rgba(0,0,0,0.05);'>
+            <div style='padding: 12px 16px; background-color: #F5F9FF; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center;'>
+                <span style='margin-right: 8px; font-size: 18px;'>🔧</span>
+                <h4 style='margin: 0; color: #424242; font-size: 1em; font-weight: 600;'>工具调用过程</h4>
+            </div>
+            <div style='padding: 16px;'>
+        """
+        
         for trace in tool_traces:
-            html += f"<div style='margin-bottom:8px;'><b>{trace['description']}</b>"
-            html += f"<br>参数: {trace['params']}"
+            # 根据状态决定卡片风格
             if trace['status'] == 'success':
-                html += f"<br>结果: {trace['result']}"
+                card_bg = "#F9FBF9"
+                status_color = "#2E7D32"
+                status_icon = "&#10004;"  # 勾
             else:
-                html += f"<br><span style='color:red;'>错误: {trace['error']}</span>"
-            html += "</div>"
-        html += "</div>"
+                card_bg = "#FEF8F8"
+                status_color = "#D32F2F"
+                status_icon = "&#10060;"  # 错
+                
+            html += f"""
+                <div style='margin-bottom: 12px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(0,0,0,0.05); background-color: {card_bg};'>
+                    <div style='padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.03);'>
+                        <span style='font-weight: 600; color: #424242; font-size: 0.95em;'>{trace['intent']}</span>
+                        <div style='display: flex; align-items: center;'>
+                            <span style='color: {status_color}; font-weight: 500; font-size: 1em; margin-right: 4px;'>{status_icon}</span>
+                            <span style='color: {status_color}; font-size: 0.85em;'>{trace['status'].capitalize()}</span>
+                        </div>
+                    </div>
+                    <div style='padding: 12px;'>
+                        <div style='margin-bottom: 8px;'>
+                            <div style='font-weight: 500; color: #616161; font-size: 0.85em; margin-bottom: 4px;'>{trace['description']}</div>
+                        </div>
+                        <div style='margin-bottom: 8px;'>
+                            <div style='font-weight: 500; color: #616161; font-size: 0.8em; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;'>参数</div>
+                            <div style='font-family: monospace; white-space: pre-wrap; font-size: 0.85em; line-height: 1.4; color: #424242; background-color: rgba(0,0,0,0.03); padding: 8px; border-radius: 4px;'>{trace['params']}</div>
+                        </div>
+            """
+            
+            if trace['status'] == 'success':
+                output_str = str(trace['result'])
+                # 创建一个唯一ID用于展开/收起长内容
+                result_id = f"result_{int(time.time() * 1000)}_{trace['intent']}"
+                
+                if len(output_str) > 300:
+                    html += f"""
+                        <div>
+                            <div style='font-weight: 500; color: #616161; font-size: 0.8em; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between;'>
+                                <span>结果</span>
+                                <button onclick="toggleResult('{result_id}')" style="background: none; border: none; color: #1E88E5; cursor: pointer; font-size: 0.85em; padding: 2px 6px;">展开完整内容</button>
+                            </div>
+                            <div id="{result_id}_preview" style='font-family: monospace; white-space: pre-wrap; font-size: 0.85em; line-height: 1.4; color: #424242; background-color: rgba(46,125,50,0.05); padding: 8px; border-radius: 4px; display: block;'>{output_str[:300]}...</div>
+                            <div id="{result_id}_full" style='font-family: monospace; white-space: pre-wrap; font-size: 0.85em; line-height: 1.4; color: #424242; background-color: rgba(46,125,50,0.05); padding: 8px; border-radius: 4px; max-height: 800px; overflow-y: auto; display: none;'>{output_str}</div>
+                        </div>
+                    """
+                else:
+                    html += f"""
+                        <div>
+                            <div style='font-weight: 500; color: #616161; font-size: 0.8em; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;'>结果</div>
+                            <div style='font-family: monospace; white-space: pre-wrap; font-size: 0.85em; line-height: 1.4; color: #424242; background-color: rgba(46,125,50,0.05); padding: 8px; border-radius: 4px;'>{output_str}</div>
+                        </div>
+                    """
+            else:
+                html += f"""
+                        <div>
+                            <div style='font-weight: 500; color: #616161; font-size: 0.8em; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;'>错误</div>
+                            <div style='font-family: monospace; white-space: pre-wrap; font-size: 0.85em; line-height: 1.4; color: #D32F2F; background-color: rgba(211,47,47,0.05); padding: 8px; border-radius: 4px;'>{trace['error']}</div>
+                        </div>
+                """
+                
+            html += """
+                    </div>
+                </div>
+            """
+            
+        # 添加长内容展开/收起的JavaScript函数
+        html += """
+            </div>
+        </div>
+        <script>
+        function toggleResult(resultId) {
+            const preview = document.getElementById(resultId + '_preview');
+            const full = document.getElementById(resultId + '_full');
+            const button = document.querySelector(`button[onclick="toggleResult('${resultId}')"]`);
+            
+            if (preview.style.display === 'none') {
+                preview.style.display = 'block';
+                full.style.display = 'none';
+                button.textContent = '展开完整内容';
+            } else {
+                preview.style.display = 'none';
+                full.style.display = 'block';
+                button.textContent = '收起';
+            }
+        }
+        </script>
+        """
         render_html(tools_placeholder, html)
         time.sleep(0.3)
         render_html(message_placeholder, "<p><em>工具调用已完成，正在生成回复...</em></p>")
@@ -431,14 +526,24 @@ def handle_message(
             full_response += chunk
             st.session_state.messages[-1]["content"] = full_response
             render_html(message_placeholder, f"{full_response}▌")
-            if st.session_state.show_tools and final_tool_html:
-                html_content = f"""
-                <div style='margin-bottom: 20px; padding: 10px; background-color: #FFFFFF; border: 1px solid #DDDDDD; border-radius: 5px;'>
-                    <h4 style='color: #212121; margin-bottom: 10px;'>🔧 工具调用过程</h4>
-                    <div id='tool-calls' style='max-height: 400px; overflow-y: auto;'>{final_tool_html}</div>
-                </div>
-                """
-                render_html(tools_placeholder, html_content)
+            
+            # 只在必要时更新工具调用区域，避免频繁重新渲染
+            if st.session_state.show_tools and final_tool_html and tool_done:
+                # 使用静态变量跟踪是否已渲染工具调用
+                if not hasattr(stream_callback, "tool_html_rendered"):
+                    stream_callback.tool_html_rendered = True
+                    html_content = f"""
+                    <div style='margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08); background-color: #FFFFFF; border: 1px solid rgba(0,0,0,0.05);'>
+                        <div style='padding: 12px 16px; background-color: #F5F9FF; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center;'>
+                            <span style='margin-right: 8px; font-size: 18px;'>🔧</span>
+                            <h4 style='margin: 0; color: #424242; font-size: 1em; font-weight: 600;'>工具调用过程</h4>
+                        </div>
+                        <div style='padding: 16px;'>
+                            <div id='tool-calls' style='overflow-y: auto;'>{final_tool_html}</div>
+                        </div>
+                    </div>
+                    """
+                    render_html(tools_placeholder, html_content)
             time.sleep(0.01)
     try:
         history = context.get_history()
@@ -454,11 +559,18 @@ def handle_message(
         time.sleep(0.3)
         render_html(message_placeholder, f"{full_response}")
         context.add_message("assistant", full_response)
-        if st.session_state.show_tools and final_tool_html:
+        
+        # 确保工具调用区域显示完整，但避免重复渲染
+        if st.session_state.show_tools and final_tool_html and not hasattr(stream_callback, "tool_html_rendered"):
             html_content = f"""
-            <div style='margin-bottom: 20px; padding: 10px; background-color: #FFFFFF; border: 1px solid #DDDDDD; border-radius: 5px;'>
-                <h4 style='color: #212121; margin-bottom: 10px;'>🔧 工具调用过程</h4>
-                <div id='tool-calls' style='max-height: 400px; overflow-y: auto;'>{final_tool_html}</div>
+            <div style='margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08); background-color: #FFFFFF; border: 1px solid rgba(0,0,0,0.05);'>
+                <div style='padding: 12px 16px; background-color: #F5F9FF; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center;'>
+                    <span style='margin-right: 8px; font-size: 18px;'>🔧</span>
+                    <h4 style='margin: 0; color: #424242; font-size: 1em; font-weight: 600;'>工具调用过程</h4>
+                </div>
+                <div style='padding: 16px;'>
+                    <div id='tool-calls' style='overflow-y: auto;'>{final_tool_html}</div>
+                </div>
             </div>
             """
             render_html(tools_placeholder, html_content)
@@ -506,15 +618,21 @@ def create_chat_interface(
                     "last_tool_html" in st.session_state and 
                     st.session_state.last_tool_html and 
                     st.session_state.show_tools and 
-                    st.session_state.output_complete
+                    st.session_state.output_complete and
+                    not st.session_state.is_generating  # 如果正在生成新消息，不显示历史工具调用
                 )
                 
                 if should_show_tools:
                     tools_placeholder = st.empty()
                     html_content = f"""
-                    <div style='margin-bottom: 20px; padding: 10px; background-color: #FFFFFF; border: 1px solid #DDDDDD; border-radius: 5px;'>
-                        <h4 style='color: #212121; margin-bottom: 10px;'>🔧 工具调用过程</h4>
-                        <div id='tool-calls' style='max-height: 400px; overflow-y: auto;'>{st.session_state.last_tool_html}</div>
+                    <div style='margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08); background-color: #FFFFFF; border: 1px solid rgba(0,0,0,0.05);'>
+                        <div style='padding: 12px 16px; background-color: #F5F9FF; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center;'>
+                            <span style='margin-right: 8px; font-size: 18px;'>🔧</span>
+                            <h4 style='margin: 0; color: #424242; font-size: 1em; font-weight: 600;'>工具调用过程</h4>
+                        </div>
+                        <div style='padding: 16px;'>
+                            <div id='tool-calls' style='overflow-y: auto;'>{st.session_state.last_tool_html}</div>
+                        </div>
                     </div>
                     """
                     render_html(tools_placeholder, html_content)

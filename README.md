@@ -39,7 +39,7 @@ PersonaForge 是一个基于 LangChain 和阿里云通义千问（DashScope API�
 
 ### 安装步骤
 ```bash
-git clone https://your-repository-url/PersonaForge.git
+git clone https://github.com/Altocumuli/Persona-Forge.git
 cd PersonaForge
 pip install -r requirements.txt
 ```

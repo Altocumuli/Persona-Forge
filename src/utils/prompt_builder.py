@@ -205,4 +205,75 @@ class PromptBuilder:
 用户输入：{user_input}
 输出示例：{{\"characters\": [\"...\"], \"scene\": \"...\", \"situation\": \"...\", \"tone\": \"...\", \"length\": \"...\"}}
 请只返回JSON对象，不要包含任何其他文本、解释、标记或前缀。如果无法提取某项参数，请用空字符串或空数组，不要省略字段。
+"""
+
+    @staticmethod
+    def build_code_analysis_param_prompt(user_input: str) -> str:
+        """构建代码分析参数提取提示词
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            提示词
+        """
+        return f"""
+请从下面的用户输入中，提取代码分析所需的参数，输出JSON格式，字段包括：code, language, focus。
+用户输入：{user_input}
+输出示例：{{"code": "def hello(): print('Hello world')", "language": "python", "focus": "代码质量"}}
+请只返回JSON对象，不要包含任何其他文本、解释、标记或前缀。如果无法提取某项参数，请用空字符串，不要省略字段。
+如果用户没有提供具体的代码，请将code字段留空，我们会在后续对话中请求用户提供。
+"""
+
+    @staticmethod
+    def build_code_improvement_param_prompt(user_input: str) -> str:
+        """构建代码优化参数提取提示词
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            提示词
+        """
+        return f"""
+请从下面的用户输入中，提取代码优化所需的参数，输出JSON格式，字段包括：code, language, improvement_type。
+用户输入：{user_input}
+输出示例：{{"code": "for i in range(len(arr)): print(arr[i])", "language": "python", "improvement_type": "性能优化"}}
+请只返回JSON对象，不要包含任何其他文本、解释、标记或前缀。如果无法提取某项参数，请用空字符串，不要省略字段。
+如果用户没有提供具体的代码，请将code字段留空，我们会在后续对话中请求用户提供。
+"""
+
+    @staticmethod
+    def build_code_diagnosis_param_prompt(user_input: str) -> str:
+        """构建代码问题诊断参数提取提示词
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            提示词
+        """
+        return f"""
+请从下面的用户输入中，提取代码问题诊断所需的参数，输出JSON格式，字段包括：code, error_message, language。
+用户输入：{user_input}
+输出示例：{{"code": "def calc(): return 10/0", "error_message": "ZeroDivisionError: division by zero", "language": "python"}}
+请只返回JSON对象，不要包含任何其他文本、解释、标记或前缀。如果无法提取某项参数，请用空字符串，不要省略字段。
+如果用户没有提供具体的代码或错误信息，请将相应字段留空，我们会在后续对话中请求用户提供。
+"""
+
+    @staticmethod
+    def build_learning_plan_param_prompt(user_input: str) -> str:
+        """构建学习计划参数提取提示词
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            提示词
+        """
+        return f"""
+请从下面的用户输入中，提取编程学习计划所需的参数，输出JSON格式，字段包括：language, current_level, learning_goal, time_available, interests。
+用户输入：{user_input}
+输出示例：{{"language": "Python", "current_level": "初学者", "learning_goal": "开发网站", "time_available": "每周10小时", "interests": "数据分析"}}
+请只返回JSON对象，不要包含任何其他文本、解释、标记或前缀。如果无法提取某项参数，请用空字符串，不要省略字段。
 """ 

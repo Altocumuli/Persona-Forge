@@ -49,4 +49,10 @@ class ToolIntentRegistry:
                         "status": "fail",
                         "description": intent.description
                     })
-        return traces 
+        return traces
+
+# 编程工具关键词配置
+CODE_ANALYZE_KEYWORDS = ["分析代码", "分析这段代码", "代码评估", "代码质量", "代码结构", "代码问题"]
+CODE_IMPROVE_KEYWORDS = ["优化代码", "改进代码", "代码优化", "重构代码", "代码建议", "提高代码质量"]
+CODE_DIAGNOSIS_KEYWORDS = ["代码错误", "代码问题", "Bug", "调试代码", "修复错误", "代码不工作", "排查问题"]
+LEARNING_PLAN_KEYWORDS = ["学习计划", "如何学习", "编程学习", "自学编程", "学习路线", "学习资源"] 

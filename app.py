@@ -274,6 +274,59 @@ if "tool_registry" not in st.session_state:
         ).generate_dialogue(params),
         description="生成对话"
     ))
+    
+    # 导入编程工具和关键词配置
+    from src.tools.code_analyzer_tool import CodeAnalyzerTool
+    from src.tools.tool_registry import CODE_ANALYZE_KEYWORDS, CODE_IMPROVE_KEYWORDS, CODE_DIAGNOSIS_KEYWORDS, LEARNING_PLAN_KEYWORDS
+    
+    # 注册代码分析工具
+    tool_registry.register(ToolIntent(
+        name="code_analyzer",
+        keywords=CODE_ANALYZE_KEYWORDS,
+        param_extractor=param_extractor.extract_code_analysis_params,
+        tool_func=lambda params: CodeAnalyzerTool(
+            llm=LLMManager(api_key=os.getenv("DASHSCOPE_API_KEY"), api_base=os.getenv("DASHSCOPE_API_BASE")).create_llm({"temperature": 0.5}),
+            tracker=st.session_state.tool_tracker
+        ).analyze_code(params),
+        description="分析代码结构和质量"
+    ))
+    
+    # 注册代码优化建议工具
+    tool_registry.register(ToolIntent(
+        name="code_improver",
+        keywords=CODE_IMPROVE_KEYWORDS,
+        param_extractor=param_extractor.extract_code_improvement_params,
+        tool_func=lambda params: CodeAnalyzerTool(
+            llm=LLMManager(api_key=os.getenv("DASHSCOPE_API_KEY"), api_base=os.getenv("DASHSCOPE_API_BASE")).create_llm({"temperature": 0.5}),
+            tracker=st.session_state.tool_tracker
+        ).suggest_code_improvements(params),
+        description="为代码提供优化和改进建议"
+    ))
+    
+    # 注册代码问题诊断工具
+    tool_registry.register(ToolIntent(
+        name="code_diagnostics",
+        keywords=CODE_DIAGNOSIS_KEYWORDS,
+        param_extractor=param_extractor.extract_code_diagnosis_params,
+        tool_func=lambda params: CodeAnalyzerTool(
+            llm=LLMManager(api_key=os.getenv("DASHSCOPE_API_KEY"), api_base=os.getenv("DASHSCOPE_API_BASE")).create_llm({"temperature": 0.5}),
+            tracker=st.session_state.tool_tracker
+        ).diagnose_code_issue(params),
+        description="诊断代码错误和问题"
+    ))
+    
+    # 注册学习计划生成工具
+    tool_registry.register(ToolIntent(
+        name="learning_plan_generator",
+        keywords=LEARNING_PLAN_KEYWORDS,
+        param_extractor=param_extractor.extract_learning_plan_params,
+        tool_func=lambda params: CodeAnalyzerTool(
+            llm=LLMManager(api_key=os.getenv("DASHSCOPE_API_KEY"), api_base=os.getenv("DASHSCOPE_API_BASE")).create_llm({"temperature": 0.6}),
+            tracker=st.session_state.tool_tracker
+        ).generate_learning_plan(params),
+        description="生成个性化的编程学习计划"
+    ))
+    
     st.session_state.tool_registry = tool_registry
 else:
     tool_registry = st.session_state.tool_registry

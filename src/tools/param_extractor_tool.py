@@ -41,4 +41,72 @@ class ParamExtractor:
         result = self._extract_json(response)
         if not result:
             print('参数提取失败，返回空')
+        return result
+        
+    def extract_code_analysis_params(self, user_input):
+        """从用户输入中提取代码分析所需的参数
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            包含code, language, focus的字典
+        """
+        prompt = PromptBuilder.build_code_analysis_param_prompt(user_input)
+        response = self.llm.invoke(prompt)
+        print('代码分析参数提取LLM原始输出:', response)
+        result = self._extract_json(response)
+        if not result:
+            print('代码分析参数提取失败，返回空')
+        return result
+    
+    def extract_code_improvement_params(self, user_input):
+        """从用户输入中提取代码优化所需的参数
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            包含code, language, improvement_type的字典
+        """
+        prompt = PromptBuilder.build_code_improvement_param_prompt(user_input)
+        response = self.llm.invoke(prompt)
+        print('代码优化参数提取LLM原始输出:', response)
+        result = self._extract_json(response)
+        if not result:
+            print('代码优化参数提取失败，返回空')
+        return result
+    
+    def extract_code_diagnosis_params(self, user_input):
+        """从用户输入中提取代码问题诊断所需的参数
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            包含code, error_message, language的字典
+        """
+        prompt = PromptBuilder.build_code_diagnosis_param_prompt(user_input)
+        response = self.llm.invoke(prompt)
+        print('代码诊断参数提取LLM原始输出:', response)
+        result = self._extract_json(response)
+        if not result:
+            print('代码诊断参数提取失败，返回空')
+        return result
+    
+    def extract_learning_plan_params(self, user_input):
+        """从用户输入中提取学习计划所需的参数
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            包含language, current_level, learning_goal, time_available, interests的字典
+        """
+        prompt = PromptBuilder.build_learning_plan_param_prompt(user_input)
+        response = self.llm.invoke(prompt)
+        print('学习计划参数提取LLM原始输出:', response)
+        result = self._extract_json(response)
+        if not result:
+            print('学习计划参数提取失败，返回空')
         return result 

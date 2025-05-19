@@ -73,8 +73,9 @@ class CodeAnalyzerTool:
             
             # 如果有跟踪器，记录工具调用完成
             if self.tracker:
-                # 截断结果如果太长
-                result_summary = response[:200] + "..." if len(response) > 200 else response
+                # # 截断结果如果太长
+                # result_summary = response[:200] + "..." if len(response) > 200 else response
+                result_summary = response
                 self.tracker.complete_trace(result_summary)
             
             return response
@@ -126,8 +127,9 @@ class CodeAnalyzerTool:
             
             # 如果有跟踪器，记录工具调用完成
             if self.tracker:
-                # 截断结果如果太长
-                result_summary = response[:200] + "..." if len(response) > 200 else response
+                # # 截断结果如果太长
+                # result_summary = response[:200] + "..." if len(response) > 200 else response
+                result_summary = response
                 self.tracker.complete_trace(result_summary)
             
             return response
@@ -183,8 +185,9 @@ class CodeAnalyzerTool:
             
             # 如果有跟踪器，记录工具调用完成
             if self.tracker:
-                # 截断结果如果太长
-                result_summary = response[:200] + "..." if len(response) > 200 else response
+                # # 截断结果如果太长
+                # result_summary = response[:200] + "..." if len(response) > 200 else response
+                result_summary = response
                 self.tracker.complete_trace(result_summary)
             
             return response
@@ -242,8 +245,9 @@ class CodeAnalyzerTool:
             
             # 如果有跟踪器，记录工具调用完成
             if self.tracker:
-                # 截断结果如果太长
-                result_summary = response[:200] + "..." if len(response) > 200 else response
+                # # 截断结果如果太长
+                # result_summary = response[:200] + "..." if len(response) > 200 else response
+                result_summary = response
                 self.tracker.complete_trace(result_summary)
             
             return response

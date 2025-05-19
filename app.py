@@ -42,8 +42,8 @@ if "tool_tracker" not in st.session_state:
     st.session_state.tool_tracker = ToolTracker()
 if "show_tools" not in st.session_state:
     st.session_state.show_tools = True
-if "last_tool_html" not in st.session_state:
-    st.session_state.last_tool_html = ""
+if "current_turn_tool_html" not in st.session_state:
+    st.session_state.current_turn_tool_html = ""
 if "output_complete" not in st.session_state:
     st.session_state.output_complete = True
 
@@ -89,12 +89,19 @@ def initialize_components():
     if not st.session_state.history_loaded:
         history = context.get_history()
         if history:
-            for msg in history:
-                if msg["role"] in ["user", "assistant"]:
-                    st.session_state.messages.append({
-                        "role": msg["role"],
-                        "content": msg["content"]
-                    })
+            processed_history = []
+            for i, msg in enumerate(history):
+                # Adapt old history format to new format with IDs and tool_html
+                # Assuming old history might not have tool_html or specific IDs
+                processed_history.append({
+                    "id": f"history_{st.session_state.session_id}_{i}", # Generate a stable ID
+                    "role": msg["role"],
+                    "content": msg["content"],
+                    "tool_html": msg.get("tool_html") # Preserve if already exists, else None
+                })
+            st.session_state.messages = processed_history
+        else:
+            st.session_state.messages = [] # Ensure it's initialized if no history
         st.session_state.history_loaded = True
     
     return persona_manager, llm_manager, session_manager, context, preference_tool, script_tool
@@ -323,23 +330,38 @@ def handle_message(
     st.session_state.is_generating = True
 
     # 添加用户消息
-    st.session_state.messages.append({"role": "user", "content": user_input})
+    user_msg_id = f"user_{uuid.uuid4().hex[:8]}"
+    st.session_state.messages.append({
+        "id": user_msg_id,
+        "role": "user",
+        "content": user_input,
+        "tool_html": None
+    })
     context.add_message("user", user_input)
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # 助手消息容器
+    # 助手消息容器 和 占位符
+    assistant_msg_id = f"assistant_{uuid.uuid4().hex[:8]}"
+    st.session_state.messages.append({
+        "id": assistant_msg_id,
+        "role": "assistant",
+        "content": "", # Placeholder for content
+        "tool_html": None # Placeholder for tool html
+    })
+    current_assistant_message_index = len(st.session_state.messages) - 1
+
     assistant_container = st.chat_message("assistant")
     with assistant_container:
-        st.markdown("*正在处理...*")
+        st.markdown("*正在处理...*") # Initial text in assistant message bubble
         tools_placeholder = st.empty()  # Placeholder for tool display
         message_placeholder = st.empty() # Placeholder for LLM response and status messages
         
         message_placeholder.markdown("*正在分析您的请求...*") # Initial status
 
-    # Tool callback updates last_tool_html AND renders to tools_placeholder
+    # Tool callback updates current_turn_tool_html AND renders to tools_placeholder
     def tool_update_callback(html_report):
-        st.session_state.last_tool_html = html_report
+        st.session_state.current_turn_tool_html = html_report
         if st.session_state.show_tools:
             if html_report and html_report.strip() != "<div>没有工具调用记录</div>":
                 # Wrap the report from ToolTracker with the standard header
@@ -378,7 +400,7 @@ def handle_message(
     
     # --- Explicitly render the final tool state before moving to LLM response --- 
     if st.session_state.show_tools:
-        final_html_report = st.session_state.last_tool_html
+        final_html_report = st.session_state.current_turn_tool_html
         if final_html_report and final_html_report.strip() != "<div>没有工具调用记录</div>":
             styled_final_html_report = (
                 f"<div style='margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08); background-color: #FFFFFF; border: 1px solid rgba(0,0,0,0.05);'>"
@@ -396,7 +418,7 @@ def handle_message(
             tools_placeholder.empty() # Ensure it's clear if no tools were actually run or logged
     
     # --- Update message placeholder after tool execution phase ---
-    if st.session_state.show_tools and st.session_state.last_tool_html and st.session_state.last_tool_html.strip() != "<div>没有工具调用记录</div>":
+    if st.session_state.show_tools and st.session_state.current_turn_tool_html and st.session_state.current_turn_tool_html.strip() != "<div>没有工具调用记录</div>":
         render_html(message_placeholder, "<p><em>工具调用已完成，正在生成回复...</em></p>")
     else:
         # Tools were not shown, or no tools were called/logged.
@@ -441,24 +463,35 @@ def handle_message(
             streaming_callback=stream_callback,
             system_prompt=enhanced_prompt
         )
-        # 确保最终回复完整显示
-        st.session_state.messages[-1]["content"] = full_response
-        time.sleep(0.3)
-        render_html(message_placeholder, f"{full_response}")
+        # Ensure final full response is in the message object (stream_callback does this)
+        # Now, save the tool HTML for this completed assistant message
+        if st.session_state.current_turn_tool_html and st.session_state.current_turn_tool_html.strip() != "<div>没有工具调用记录</div>":
+            st.session_state.messages[current_assistant_message_index]["tool_html"] = st.session_state.current_turn_tool_html
+        else:
+            st.session_state.messages[current_assistant_message_index]["tool_html"] = None # Ensure it's None if no tools were run
+
+        # Clear current turn tool HTML as it has been committed or was not used
+        st.session_state.current_turn_tool_html = ""
+        
+        # Final render of the completed message content (already done by stream_callback's last call)
+        # render_html(message_placeholder, f"{full_response}") 
         context.add_message("assistant", full_response)
         
-        # Tool HTML has already been rendered, no need for final rendering here.
         st.session_state.output_complete = True
         st.session_state.is_generating = False
     except Exception as e:
         st.error(f"生成回复时出错: {e}")
-        if full_response:
-            st.session_state.messages[-1]["content"] = full_response
-            render_html(message_placeholder, f"{full_response}")
-            context.add_message("assistant", full_response)
-        else:
-            if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and not st.session_state.messages[-1]["content"]:
-                st.session_state.messages.pop()
+        if full_response: # If some response was generated before error
+            st.session_state.messages[current_assistant_message_index]["content"] = full_response
+            # Potentially save partial tool HTML if relevant, or leave as None
+            if st.session_state.current_turn_tool_html and st.session_state.current_turn_tool_html.strip() != "<div>没有工具调用记录</div>":
+                 st.session_state.messages[current_assistant_message_index]["tool_html"] = st.session_state.current_turn_tool_html
+            context.add_message("assistant", full_response) # Save partial response to context
+        else: # If no response at all, and placeholder was added
+            if st.session_state.messages and st.session_state.messages[-1]["id"] == assistant_msg_id: # Check if the last msg is our placeholder
+                st.session_state.messages.pop() # Remove the empty assistant message placeholder
+        
+        st.session_state.current_turn_tool_html = "" # Clear on error too
         st.session_state.is_generating = False
         st.session_state.output_complete = True
 
@@ -477,43 +510,28 @@ def create_chat_interface(
         preference_tool: 偏好工具
         script_tool: 剧本工具
     """
-    message_index = 0
     # 显示所有历史消息
     for message in st.session_state.messages:
-        if message["role"] == "user":
-            with st.chat_message("user"):
-                st.markdown(message["content"])
-        else:
-            with st.chat_message("assistant"):
-                # 如果是最后一条助手消息并且有保存的工具调用HTML，显示工具调用
-                is_last_message = message == st.session_state.messages[-1]
-                should_show_tools = (
-                    is_last_message and 
-                    "last_tool_html" in st.session_state and 
-                    st.session_state.last_tool_html and 
-                    st.session_state.show_tools and 
-                    st.session_state.output_complete and
-                    not st.session_state.is_generating  # 如果正在生成新消息，不显示历史工具调用
+        with st.chat_message(message["role"]):
+            # Display tool HTML for assistant messages if available and enabled
+            if message["role"] == "assistant" and message.get("tool_html") and st.session_state.show_tools:
+                tool_html_content = message["tool_html"]
+                # Wrap the stored tool_html with the standard header and styling
+                styled_tool_html = (
+                    f"<div style='margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08); background-color: #FFFFFF; border: 1px solid rgba(0,0,0,0.05);'>"
+                    f"    <div style='padding: 12px 16px; background-color: #F5F9FF; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center;'>"
+                    f"        <span style='margin-right: 8px; font-size: 18px;'>🔧</span>"
+                    f"        <h4 style='margin: 0; color: #424242; font-size: 1em; font-weight: 600;'>工具调用过程</h4>"
+                    f"    </div>"
+                    f"    <div style='padding: 8px;'>" # Consistent padding
+                    f"        {tool_html_content}"
+                    f"    </div>"
+                    f"</div>"
                 )
-                
-                if should_show_tools:
-                    tools_placeholder = st.empty()
-                    html_content = f"""
-                    <div style='margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08); background-color: #FFFFFF; border: 1px solid rgba(0,0,0,0.05);'>
-                        <div style='padding: 12px 16px; background-color: #F5F9FF; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center;'>
-                            <span style='margin-right: 8px; font-size: 18px;'>🔧</span>
-                            <h4 style='margin: 0; color: #424242; font-size: 1em; font-weight: 600;'>工具调用过程</h4>
-                        </div>
-                        <div style='padding: 16px;'>
-                            <div id='tool-calls' style='overflow-y: auto;'>{st.session_state.last_tool_html}</div>
-                        </div>
-                    </div>
-                    """
-                    render_html(tools_placeholder, html_content)
-                
-                # 显示助手回复
-                st.markdown(message["content"])
-        message_index += 1
+                st.markdown(styled_tool_html, unsafe_allow_html=True)
+            
+            # Display message content
+            st.markdown(message["content"])
     
     # 聊天输入
     if user_input := st.chat_input("输入您的消息...", disabled=st.session_state.is_generating):

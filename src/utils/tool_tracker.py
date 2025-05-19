@@ -144,7 +144,6 @@ class ToolTrace:
                     outputs_display_str = json.dumps(json_obj, ensure_ascii=False, indent=2)
                 else:
                     outputs_display_str = str(self.outputs)
-                print(outputs_display_str)
             except json.JSONDecodeError: # More specific error handling
                 outputs_display_str = str(self.outputs) # Fallback for invalid JSON
             except Exception:  # Fallback for other potential errors during string conversion
